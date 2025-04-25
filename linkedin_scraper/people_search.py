@@ -51,14 +51,14 @@ class PeopleSearch(Scraper):
         return
 
 
-    def search(self, search_term: str) -> List[Job]:
+    def search(self, search_term: str) -> List[dict]:
         url = os.path.join(self.base_url, "search/results/people/") + f"?keywords={urllib.parse.quote(search_term)}&refresh=true"
         self.driver.get(url)
         self.scroll_to_bottom()
         #self.focus()
         sleep(self.WAIT_FOR_ELEMENT_TIMEOUT)
 
-        people_list_class_name = "entity-result"
+        people_list_class_name = "IxlEPbRZwQYrRltKPvHAyjBmCdIWTAoYo"
         job_listing = self.wait_for_element_to_load(name=people_list_class_name)
 
         self.scroll_class_name_element_to_page_percent(people_list_class_name, 0.3)
@@ -72,9 +72,39 @@ class PeopleSearch(Scraper):
         self.scroll_class_name_element_to_page_percent(people_list_class_name, 1)
         #self.focus()
         sleep(self.WAIT_FOR_ELEMENT_TIMEOUT)
-
+        
         people_profiles = []
-        for people_card in self.wait_for_all_elements_to_load(name="entity-result__item", base=job_listing):
-            people = self.scrape_people_card(people_card)
-            people_profiles.append(people)
+        # Find all profile cards by their class using CSS selector
+        people_cards = self.driver.find_elements("css selector", ".eETATgYTipaVsmrBChiBJJvFsdPhNpulhPZUVLHLo")
+        
+        for card in people_cards:
+            try:
+                # Find the profile link in the card
+                profile_link = card.get_attribute("href")
+                
+                # Extract profile information
+                profile_data = {}
+                
+                # Store the profile URL
+                if profile_link and "/in/" in profile_link:
+                    # Extract the profile URL and miniProfile URN
+                    profile_data["profile_url"] = profile_link.split("?")[0]
+                    
+                    # Extract the mini profile URN if available
+                    if "miniProfileUrn=" in profile_link:
+                        mini_profile_urn = profile_link.split("miniProfileUrn=")[1].split("&")[0]
+                        profile_data["mini_profile_urn"] = urllib.parse.unquote(mini_profile_urn)
+                    
+                    # Try to get the profile name
+                    try:
+                        name_element = card.find_element("tag name", "span")
+                        profile_data["name"] = name_element.text.strip()
+                    except:
+                        profile_data["name"] = "Unknown"
+                        
+                    people_profiles.append(profile_data)
+            except Exception as e:
+                print(f"Error extracting profile data: {str(e)}")
+                continue
+                
         return people_profiles
