@@ -54,33 +54,54 @@ class PeopleSearch(Scraper):
     def search(self, search_term: str) -> List[dict]:
         url = os.path.join(self.base_url, "search/results/people/") + f"?keywords={urllib.parse.quote(search_term)}&refresh=true"
         self.driver.get(url)
+        
+        sleep(5)  
+        
         self.scroll_to_bottom()
-        #self.focus()
-        sleep(self.WAIT_FOR_ELEMENT_TIMEOUT)
-
+        sleep(2)  
+        
         people_list_class_name = "IxlEPbRZwQYrRltKPvHAyjBmCdIWTAoYo"
-        job_listing = self.wait_for_element_to_load(name=people_list_class_name)
-
-        self.scroll_class_name_element_to_page_percent(people_list_class_name, 0.3)
-        #self.focus()
-        sleep(self.WAIT_FOR_ELEMENT_TIMEOUT)
-
-        self.scroll_class_name_element_to_page_percent(people_list_class_name, 0.6)
-        #self.focus()
-        sleep(self.WAIT_FOR_ELEMENT_TIMEOUT)
-
-        self.scroll_class_name_element_to_page_percent(people_list_class_name, 1)
-        #self.focus()
-        sleep(self.WAIT_FOR_ELEMENT_TIMEOUT)
+        
+        try:
+            from selenium.webdriver.common.by import By
+            from selenium.webdriver.support.ui import WebDriverWait
+            from selenium.webdriver.support import expected_conditions as EC
+            
+            WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.CLASS_NAME, people_list_class_name))
+            )
+        except Exception as e:
+            print(f"Waiting for element error: {str(e)}")
+        
+        try:
+            for percent in [0.3, 0.6, 1.0]:
+                self.driver.execute_script(
+                    "window.scrollTo(0, document.body.scrollHeight * arguments[0]);", 
+                    percent
+                )
+                sleep(2)  
+        except Exception as e:
+            print(f"Scrolling error: {str(e)}")
         
         people_profiles = []
-        # Find all profile cards by their class using CSS selector
-        people_cards = self.driver.find_elements("css selector", ".eETATgYTipaVsmrBChiBJJvFsdPhNpulhPZUVLHLo")
+        try:
+            people_cards = self.driver.find_elements("class name", "IxlEPbRZwQYrRltKPvHAyjBmCdIWTAoYo")
+            print(f"Found {len(people_cards)} profile cards")
+        except Exception as e:
+            print(f"Error finding profile cards: {str(e)}")
+            people_cards = []
         
+        # Now iterate through the profile cards
         for card in people_cards:
             try:
-                # Find the profile link in the card
-                profile_link = card.get_attribute("href")
+                profile_links = card.find_elements("class name", "eETATgYTipaVsmrBChiBJJvFsdPhNpulhPZUVLHLo")
+                
+                if profile_links and len(profile_links) > 1:
+                    profile_link = profile_links[1].get_attribute("href")
+                elif profile_links:
+                    profile_link = profile_links[0].get_attribute("href")
+                else:
+                    continue  
                 
                 # Extract profile information
                 profile_data = {}
@@ -97,10 +118,36 @@ class PeopleSearch(Scraper):
                     
                     # Try to get the profile name
                     try:
-                        name_element = card.find_element("tag name", "span")
-                        profile_data["name"] = name_element.text.strip()
-                    except:
+                        if profile_links and len(profile_links) > 1:
+                            name_element = profile_links[1]
+                            spans = name_element.find_elements("tag name", "span")
+                            if spans and len(spans) > 0:
+                                for span in spans:
+                                    name_text = span.text.strip()
+                                    if name_text and "查看" not in name_text and "的档案" not in name_text:
+                                        profile_data["name"] = name_text
+                                        break
+                            else:
+                                profile_data["name"] = name_element.text.strip()
+                        else:
+                            profile_data["name"] = "Unknown"
+                    except Exception as name_err:
+                        print(f"Error extracting name: {str(name_err)}")
                         profile_data["name"] = "Unknown"
+                        
+                    try:
+                        job_elements = card.find_elements("class name", "LjmdKCEqKITHihFOiQsBAQylkdnsWhqZii")
+                        if job_elements and len(job_elements) > 0:
+                            profile_data["title"] = job_elements[0].text.strip()
+                    except:
+                        pass
+
+                    try:
+                        location_elements = card.find_elements("class name", "cTPhJiHyNLmxdQYFlsEOutjznmqrVHUByZwZ")
+                        if location_elements and len(location_elements) > 0:
+                            profile_data["location"] = location_elements[0].text.strip()
+                    except:
+                        pass
                         
                     people_profiles.append(profile_data)
             except Exception as e:
