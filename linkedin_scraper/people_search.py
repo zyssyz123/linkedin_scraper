@@ -55,10 +55,12 @@ class PeopleSearch(Scraper):
         url = os.path.join(self.base_url, "search/results/people/") + f"?keywords={urllib.parse.quote(search_term)}&refresh=true"
         self.driver.get(url)
         
-        sleep(5)  
+        # Increase initial wait time to ensure the page is fully loaded
+        sleep(5)  # Increased to 5 seconds
         
+        # Ensure scrolling to the bottom to load all content
         self.scroll_to_bottom()
-        sleep(2)  
+        sleep(2)  # Wait after scrolling
         
         people_list_class_name = "IxlEPbRZwQYrRltKPvHAyjBmCdIWTAoYo"
         
@@ -83,9 +85,10 @@ class PeopleSearch(Scraper):
         except Exception as e:
             print(f"Scrolling error: {str(e)}")
         
+        # 继续使用已修复的代码查找和处理个人资料卡片
         people_profiles = []
         try:
-            people_cards = self.driver.find_elements("class name", "IxlEPbRZwQYrRltKPvHAyjBmCdIWTAoYo")
+            people_cards = self.driver.find_elements("class name", "KeJAJBJjWbiWeKRImOrlHrbGqNSOnRjWg")
             print(f"Found {len(people_cards)} profile cards")
         except Exception as e:
             print(f"Error finding profile cards: {str(e)}")
@@ -94,14 +97,16 @@ class PeopleSearch(Scraper):
         # Now iterate through the profile cards
         for card in people_cards:
             try:
-                profile_links = card.find_elements("class name", "eETATgYTipaVsmrBChiBJJvFsdPhNpulhPZUVLHLo")
+                # Find profile links in the card (find name links)
+                profile_links = card.find_elements("class name", "ixLDZYcumcilIxbNpiyQOyFvIFrYTMHVaDIjItPI")
                 
+                # Find the user's main link at the frequently appearing first link position (usually the second link)
                 if profile_links and len(profile_links) > 1:
                     profile_link = profile_links[1].get_attribute("href")
                 elif profile_links:
                     profile_link = profile_links[0].get_attribute("href")
                 else:
-                    continue  
+                    continue  # If there are no links, skip this card
                 
                 # Extract profile information
                 profile_data = {}
@@ -118,8 +123,10 @@ class PeopleSearch(Scraper):
                     
                     # Try to get the profile name
                     try:
+                        # Directly get the name from the found link element
                         if profile_links and len(profile_links) > 1:
                             name_element = profile_links[1]
+                            # Get the text content in the span element
                             spans = name_element.find_elements("tag name", "span")
                             if spans and len(spans) > 0:
                                 for span in spans:
@@ -135,15 +142,17 @@ class PeopleSearch(Scraper):
                         print(f"Error extracting name: {str(name_err)}")
                         profile_data["name"] = "Unknown"
                         
+                    # Try to get job title information
                     try:
-                        job_elements = card.find_elements("class name", "LjmdKCEqKITHihFOiQsBAQylkdnsWhqZii")
+                        job_elements = card.find_elements("class name", "EZzwVWUZPCxEUMuDkoTLRKuyHLvsFHg")
                         if job_elements and len(job_elements) > 0:
                             profile_data["title"] = job_elements[0].text.strip()
                     except:
                         pass
 
+                    # Try to get location information
                     try:
-                        location_elements = card.find_elements("class name", "cTPhJiHyNLmxdQYFlsEOutjznmqrVHUByZwZ")
+                        location_elements = card.find_elements("class name", "JPozAqdveSpvKMyTBHynGFTZCCgPoSokSJ")
                         if location_elements and len(location_elements) > 0:
                             profile_data["location"] = location_elements[0].text.strip()
                     except:
