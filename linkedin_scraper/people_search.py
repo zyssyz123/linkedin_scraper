@@ -88,7 +88,7 @@ class PeopleSearch(Scraper):
         # 继续使用已修复的代码查找和处理个人资料卡片
         people_profiles = []
         try:
-            people_cards = self.driver.find_elements("class name", "KeJAJBJjWbiWeKRImOrlHrbGqNSOnRjWg")
+            people_cards = self.driver.find_elements("class name", "vDMrZJoIaEvEMBBxnpSKoPnOQmMsutqHWRtw")
             print(f"Found {len(people_cards)} profile cards")
         except Exception as e:
             print(f"Error finding profile cards: {str(e)}")
@@ -98,7 +98,7 @@ class PeopleSearch(Scraper):
         for card in people_cards:
             try:
                 # Find profile links in the card (find name links)
-                profile_links = card.find_elements("class name", "ixLDZYcumcilIxbNpiyQOyFvIFrYTMHVaDIjItPI")
+                profile_links = card.find_elements("class name", "ZwZBMLuwwYKLtqOdlRcByADgXVbjtIKaeTA ")
                 
                 # Find the user's main link at the frequently appearing first link position (usually the second link)
                 if profile_links and len(profile_links) > 1:
